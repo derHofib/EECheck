@@ -6,6 +6,7 @@ require (
 	github.com/enbility/eebus-go v0.7.1-0.20260731142702-0aa83d264add
 	github.com/enbility/ship-go v0.6.1-0.20260901093810-8f087cc086d7
 	github.com/enbility/spine-go v0.7.1-0.20260831112011-ff669af44e3c
+	github.com/go-pdf/fpdf v0.9.0
 )
 
 require (

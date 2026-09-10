@@ -175,6 +175,14 @@ func (c *Core) Shutdown() { c.myService.Shutdown() }
 // need it directly (installed via AddUseCase in the usual case).
 func (c *Core) LocalEntity() spineapi.EntityLocalInterface { return c.localEntity }
 
+// SubscribeMessages attaches a raw SPINE event sink (internal/messagelog.Log)
+// to the local device's event bus, alongside the LPC/LPP use-case handlers,
+// so it observes every decoded message for the "Live-Nachrichtenverkehr"
+// and "Rohlog" requirements (docs/01-anforderungen.md sections 1.5/1.6).
+func (c *Core) SubscribeMessages(handler spineapi.EventHandlerInterface) error {
+	return c.localEntity.Device().Events().Subscribe(handler)
+}
+
 // DiscoveredDevices returns the last known mDNS view of all visible EEBus
 // services, regardless of pairing state.
 func (c *Core) DiscoveredDevices() []shipapi.RemoteMdnsService {
