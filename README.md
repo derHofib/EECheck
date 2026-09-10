@@ -23,7 +23,7 @@ internal/orchestrator    Anlagen-Testlauf über mehrere Geräte
 internal/messagelog      Live-Nachrichtenverkehr + Rohlog (NDJSON)
 internal/report          PDF-Prüfprotokoll (Gerät + Gesamt-Anlage)
 internal/store           Persistenz: bekannte Geräte, Testlauf-Historie
-internal/gui             Fyne-GUI (Dashboard, Discovery, Szenario, Live-Monitor, Report)
+internal/gui             Fyne-GUI: Dashboard, Test, Manuelle Steuerung, Anlage & Kunde (Tabs)
 internal/testdevice      Gemeinsamer SHIP/SPINE-Unterbau für die Test-Geräte-Fixtures
 cmd/testwallbox          Simulierte Wallbox (Controllable System, LPC) zum Testen ohne Hardware
 cmd/testspeicher         Simulierter Batteriespeicher (Controllable System, LPC+LPP)
@@ -77,6 +77,22 @@ kein Gerät gefunden, obwohl beide Programme fehlerfrei laufen). Am
 besten auf dem echten Zielrechner testen, auf dem später auch `eecheck`
 läuft.
 
+## GUI-Struktur
+
+Ein Fenster mit vier Tabs:
+
+- **Dashboard** — gepairte Geräte mit Live-Verbindungsstatus (grün/gelb/rot)
+  und letztem Testergebnis, kompakter Live-Nachrichtenverkehr aller Geräte,
+  aktuelle Anlage/Kunde-Kopfzeile, "Neues Gerät suchen" (Dialog).
+- **Test** — Geräte-/Anwendungsfall-Auswahl, Standard-Szenario (0/30/60/100 %),
+  Live-Monitor und Ergebnis (PDF-Export + Rohlog automatisch abgelegt),
+  Testlauf-Historie.
+- **Manuelle Steuerung** — freien Watt-Wert direkt an ein Gerät senden und
+  Soll/Ist live beobachten, ohne Testlauf/Bericht — zum schnellen Prüfen
+  vor Ort ("funktioniert die Kommunikation überhaupt").
+- **Anlage & Kunde** — Errichter, Techniker, Kunde, Netzanschlusspunkt,
+  Notizen; wird auf jedem PDF-Prüfprotokoll ausgewiesen und persistiert.
+
 ## Stand / offene Punkte
 
 Diese Implementierung deckt den vollständigen MVP-Pfad aus
@@ -87,7 +103,8 @@ bewusst als Erweiterung markiert (siehe Kommentare in
 `internal/orchestrator/orchestrator.go`):
 
 - Reale Leistungsmessung (MPC/MGCP-Anwendungsfälle) statt Limit-Rückmeldung
-  als "Ist-Wert"-Proxy.
+  als "Ist-Wert"-Proxy (gilt für den automatischen Testlauf; die Manuelle
+  Steuerung zeigt ohnehin nur den Limit-Rückmeldewert, keine Messung).
 - Verifikation gegen echte Hardware (Wallbox etc.) — bislang nur gegen den
   eebus-go-Quellcode und dessen eigenes `examples/controlbox`-Referenzbeispiel
   verifiziert, nicht gegen reale Geräte getestet.

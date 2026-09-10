@@ -50,5 +50,14 @@ Dashboard ──▶ Discovery & Pairing ──▶ (zurück zu) Dashboard
 
 ## Offene Design-Fragen (an mich klären)
 
-- Soll es eine reine Einzelfenster-App sein, oder sind mehrere Fenster/Tabs (z.B. Log in eigenem Fenster) gewünscht?
+- ~~Soll es eine reine Einzelfenster-App sein, oder sind mehrere Fenster/Tabs gewünscht?~~
+  **Entschieden:** Ein Fenster mit persistenter Tab-Leiste: **Dashboard**
+  (gepairte Geräte, Live-Verbindungsstatus, kompakter Live-Nachrichtenverkehr,
+  aktuelle Anlage/Kunde-Kopfzeile), **Test** (Geräte-/Anwendungsfall-Auswahl,
+  Szenario-Konfiguration, Live-Monitor und Ergebnis innerhalb desselben Tabs
+  nacheinander, plus Testlauf-Historie), **Manuelle Steuerung** (freien
+  kW-Wert direkt an ein Gerät senden, ohne Testlauf/Bericht — Fernbedienung
+  zum schnellen Prüfen vor Ort) und **Anlage & Kunde** (Stammdaten, die auf
+  jedem Prüfprotokoll erscheinen). Discovery/Pairing ist ein Dialog über dem
+  Dashboard, kein eigener Tab, da es ein einmaliger Vorgang pro Gerät ist.
 - Reicht Text+Tabelle für den PDF-Report, oder sollen Soll/Ist-Verläufe auch als Diagramm dargestellt werden?

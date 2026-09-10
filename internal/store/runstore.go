@@ -12,15 +12,17 @@ import (
 )
 
 // RunRecord is the persisted summary of a finished test run, for the
-// Dashboard's "Liste vergangener Testläufe" (docs/03-ui-design.md, screen 1).
+// Dashboard's "Liste vergangener Testläufe" (docs/03-ui-design.md, screen 1)
+// and for showing each device's last result on the Dashboard tab.
 type RunRecord struct {
-	ID          string                 `json:"id"`
-	StartedAt   time.Time              `json:"startedAt"`
-	EndedAt     time.Time              `json:"endedAt"`
-	SiteAddress string                 `json:"siteAddress"`
-	Status      orchestrator.RunStatus `json:"status"`
-	DeviceNames []string               `json:"deviceNames"`
-	ReportDir   string                 `json:"reportDir"` // directory holding the exported PDFs + raw log for this run
+	ID            string                            `json:"id"`
+	StartedAt     time.Time                         `json:"startedAt"`
+	EndedAt       time.Time                         `json:"endedAt"`
+	SiteAddress   string                            `json:"siteAddress"`
+	Status        orchestrator.RunStatus            `json:"status"`
+	DeviceNames   []string                          `json:"deviceNames"`
+	DeviceResults map[string]orchestrator.RunStatus `json:"deviceResults"` // SKI -> Ergebnis
+	ReportDir     string                            `json:"reportDir"`     // directory holding the exported PDFs + raw log for this run
 }
 
 // RunStore is a thread-safe, file-backed list of finished test runs.

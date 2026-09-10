@@ -54,6 +54,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("could not open run store: %v", err)
 	}
+	metaStore, err := store.OpenMetaStore(dataDir)
+	if err != nil {
+		log.Fatalf("could not open meta store: %v", err)
+	}
 
 	// Re-trust every previously paired device so a re-test never requires
 	// pairing again (docs/05-recherche-antworten.md section 5).
@@ -68,7 +72,7 @@ func main() {
 
 	orch := orchestrator.New(lpcHandler, lppHandler)
 
-	app := gui.NewApp(core, orch, deviceStore, runStore, msgLog, dataDir)
+	app := gui.NewApp(core, orch, deviceStore, runStore, metaStore, msgLog, dataDir)
 	app.Run()
 }
 

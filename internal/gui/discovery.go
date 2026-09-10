@@ -16,12 +16,13 @@ import (
 	"github.com/derHofib/EECheck/internal/store"
 )
 
-// ShowDiscovery renders screen 2 from docs/03-ui-design.md: a live mDNS
-// discovery list with a per-device "Pairing starten" action. Trust
-// confirmation here is certificate/SKI-based, not PIN-based - see
-// docs/05-recherche-antworten.md section 4 for why the UI shows the SKI
-// and a trust decision rather than a PIN entry field.
-func (a *App) ShowDiscovery() {
+// showDiscoveryDialog opens the live mDNS discovery list as an overlay
+// dialog on top of the current tab, so the persistent Dashboard/Test/
+// Manuell/Anlage tabs stay in place. Trust confirmation here is
+// certificate/SKI-based, not PIN-based - see docs/05-recherche-antworten.md
+// section 4 for why the dialog shows the SKI and a trust decision rather
+// than a PIN entry field.
+func (a *App) showDiscoveryDialog() {
 	statusLabel := widget.NewLabel("")
 	var services []shipapi.RemoteMdnsService
 	var list *widget.List
@@ -63,7 +64,8 @@ func (a *App) ShowDiscovery() {
 		},
 	)
 
-	a.core.Subscribe(func(ev eebus.Event) {
+	unsubscribe := func() {}
+	unsubscribe = a.subscribeDiscovery(func(ev eebus.Event) {
 		switch ev.Kind {
 		case eebus.EventDiscoveryUpdated:
 			fyne.Do(refresh)
@@ -79,18 +81,30 @@ func (a *App) ShowDiscovery() {
 		}
 	})
 
-	backBtn := widget.NewButton("Zurück zum Dashboard", func() { a.ShowDashboard() })
-
 	content := container.NewBorder(
-		container.NewVBox(
-			widget.NewLabelWithStyle("Discovery & Pairing", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-			widget.NewLabel("Gefundene EEBus-Geräte im lokalen Netz:"),
-		),
-		container.NewVBox(statusLabel, backBtn),
+		widget.NewLabel("Gefundene EEBus-Geräte im lokalen Netz:"),
+		statusLabel,
 		nil, nil,
 		list,
 	)
-	a.setContent(content)
+
+	d := dialog.NewCustom("Neues Gerät suchen", "Schließen", content, a.win)
+	d.Resize(fyne.NewSize(760, 520))
+	d.SetOnClosed(unsubscribe)
+	d.Show()
+}
+
+// subscribeDiscovery is a thin wrapper so the dialog's subscription is
+// clearly scoped (Core.Subscribe itself has no unsubscribe - the returned
+// func here just stops forwarding events to this particular dialog).
+func (a *App) subscribeDiscovery(fn func(eebus.Event)) func() {
+	active := true
+	a.core.Subscribe(func(ev eebus.Event) {
+		if active {
+			fn(ev)
+		}
+	})
+	return func() { active = false }
 }
 
 func (a *App) startPairing(svc shipapi.RemoteMdnsService, statusLabel *widget.Label) {

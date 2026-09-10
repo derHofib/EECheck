@@ -275,14 +275,32 @@ func (o *Orchestrator) runUseCase(ctx context.Context, run *TestRun, d DeviceUnd
 
 	o.publish(RunEvent{RunID: run.ID, SKI: d.SKI, UseCase: handler.ID(), Status: StatusRunning})
 
-	nominalMaxW, err := handler.NominalMaxW(d.Entity)
-	if err != nil || nominalMaxW <= 0 {
-		run.mu.Lock()
-		res.Status = StatusError
-		res.Error = fmt.Sprintf("Nominalleistung nicht ermittelbar: %v", err)
-		run.mu.Unlock()
-		o.publish(RunEvent{RunID: run.ID, SKI: d.SKI, UseCase: handler.ID(), Status: StatusError})
-		return StatusError
+	// Right after pairing, the remote entity's ElectricalConnection
+	// characteristic (nominal max power) may not have propagated to our
+	// client-side cache yet - SPINE syncs it asynchronously via a
+	// subscription, not necessarily before the use case is reported as
+	// supported. Retry briefly instead of failing on the first read.
+	var nominalMaxW float64
+	var err error
+	nominalMaxDeadline := time.Now().Add(15 * time.Second)
+	for {
+		nominalMaxW, err = handler.NominalMaxW(d.Entity)
+		if err == nil && nominalMaxW > 0 {
+			break
+		}
+		if time.Now().After(nominalMaxDeadline) {
+			run.mu.Lock()
+			res.Status = StatusError
+			res.Error = fmt.Sprintf("Nominalleistung nicht ermittelbar: %v", err)
+			run.mu.Unlock()
+			o.publish(RunEvent{RunID: run.ID, SKI: d.SKI, UseCase: handler.ID(), Status: StatusError})
+			return StatusError
+		}
+		select {
+		case <-time.After(time.Second):
+		case <-ctx.Done():
+			return StatusError
+		}
 	}
 	run.mu.Lock()
 	res.NominalMaxW = nominalMaxW
