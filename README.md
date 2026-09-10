@@ -24,6 +24,9 @@ internal/messagelog      Live-Nachrichtenverkehr + Rohlog (NDJSON)
 internal/report          PDF-Prüfprotokoll (Gerät + Gesamt-Anlage)
 internal/store           Persistenz: bekannte Geräte, Testlauf-Historie
 internal/gui             Fyne-GUI (Dashboard, Discovery, Szenario, Live-Monitor, Report)
+internal/testdevice      Gemeinsamer SHIP/SPINE-Unterbau für die Test-Geräte-Fixtures
+cmd/testwallbox          Simulierte Wallbox (Controllable System, LPC) zum Testen ohne Hardware
+cmd/testspeicher         Simulierter Batteriespeicher (Controllable System, LPC+LPP)
 ```
 
 ## Bauen
@@ -46,6 +49,33 @@ Lokal (Linux, zur Entwicklung):
 go build ./...
 go run ./cmd/eecheck
 ```
+
+## Ohne echte Hardware testen: Test-Wallbox und Test-Speicher
+
+`cmd/testwallbox` und `cmd/testspeicher` simulieren die Geräteseite
+(Controllable System) und lassen sich von `eecheck` ganz normal per
+Discovery finden und pairen - nützlich, um die Kommunikation zu prüfen,
+bevor eine echte Anlage angeschlossen wird.
+
+```
+go run ./cmd/testwallbox                 # 11 kW Wallbox, LPC, Port 4712
+go run ./cmd/testspeicher                # 8 kW Speicher, LPC+LPP, Port 4713
+go run ./cmd/eecheck                     # Steuerbox-Simulator: "Neues Gerät suchen"
+```
+
+Beide Fixtures akzeptieren Pairing-Anfragen automatisch (keine manuelle
+Bestätigung auf der Geräteseite nötig - siehe Kommentar in
+`internal/testdevice/device.go`) und geben auf der Konsole aus, welches
+Limit sie empfangen und übernommen haben. Ihre Geräte-Identität
+(Zertifikat) wird unter `~/.config/EECheck/testwallbox` bzw.
+`.../testspeicher` persistiert, bleibt also über Neustarts stabil.
+
+**Voraussetzung:** Discovery basiert auf mDNS/Zeroconf (UDP-Multicast).
+Das funktioniert zuverlässig im normalen LAN eines Mac/PC, aber nicht in
+jeder Sandbox/Cloud-Umgebung mit eingeschränktem Netzwerk (dort wird
+kein Gerät gefunden, obwohl beide Programme fehlerfrei laufen). Am
+besten auf dem echten Zielrechner testen, auf dem später auch `eecheck`
+läuft.
 
 ## Stand / offene Punkte
 
