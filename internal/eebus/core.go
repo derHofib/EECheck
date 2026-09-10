@@ -36,12 +36,12 @@ type Config struct {
 type EventKind string
 
 const (
-	EventDiscoveryUpdated  EventKind = "discovery_updated"
-	EventPairingProgress   EventKind = "pairing_progress"
-	EventDeviceConnected   EventKind = "device_connected"
+	EventDiscoveryUpdated   EventKind = "discovery_updated"
+	EventPairingProgress    EventKind = "pairing_progress"
+	EventDeviceConnected    EventKind = "device_connected"
 	EventDeviceDisconnected EventKind = "device_disconnected"
-	EventTrustDenied       EventKind = "trust_denied"
-	EventUseCaseSupport    EventKind = "usecase_support" // a remote entity started/stopped advertising a use case
+	EventTrustDenied        EventKind = "trust_denied"
+	EventUseCaseSupport     EventKind = "usecase_support" // a remote entity started/stopped advertising a use case
 )
 
 // Event is delivered to the Core's subscriber (normally the orchestrator)
@@ -54,11 +54,11 @@ type Event struct {
 
 // Core is the generic EEBus protocol layer. It is safe for concurrent use.
 type Core struct {
-	cfg       Config
-	myService *service.Service
+	cfg         Config
+	myService   *service.Service
 	localEntity spineapi.EntityLocalInterface
 
-	mu        sync.Mutex
+	mu         sync.Mutex
 	discovered map[string]shipapi.RemoteMdnsService // ski -> last seen mDNS record
 	listeners  []func(Event)
 

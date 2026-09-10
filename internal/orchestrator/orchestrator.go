@@ -74,7 +74,7 @@ type RunEvent struct {
 	UseCase  domainmodel.UseCaseID
 	Status   RunStatus
 	Step     *usecase.StepResult // set once a step finishes
-	StepName string               // set while a step is in flight (before result available)
+	StepName string              // set while a step is in flight (before result available)
 }
 
 // TestRun is one Anlagen-Testlauf: a fixed scenario executed against a set
@@ -114,6 +114,39 @@ func New(handlers ...usecase.Handler) *Orchestrator {
 	return o
 }
 
+// LiveEntity groups a currently-visible remote SPINE entity with every
+// installed use case it advertises support for, for the GUI's device list
+// and Szenario-Konfiguration screen.
+type LiveEntity struct {
+	SKI      string
+	Entity   spineapi.EntityRemoteInterface
+	UseCases []domainmodel.UseCaseID
+}
+
+// LiveEntities returns every remote entity currently advertising support
+// for at least one installed use case, merged across handlers so a
+// bidirectional device (LPC+LPP) appears once with both use cases listed.
+func (o *Orchestrator) LiveEntities() []LiveEntity {
+	byEntity := make(map[spineapi.EntityRemoteInterface]*LiveEntity)
+	order := make([]spineapi.EntityRemoteInterface, 0)
+	for id, h := range o.handlers {
+		for _, e := range h.SupportedEntities() {
+			le, ok := byEntity[e]
+			if !ok {
+				le = &LiveEntity{SKI: e.Device().Ski(), Entity: e}
+				byEntity[e] = le
+				order = append(order, e)
+			}
+			le.UseCases = append(le.UseCases, id)
+		}
+	}
+	out := make([]LiveEntity, 0, len(order))
+	for _, e := range order {
+		out = append(out, *byEntity[e])
+	}
+	return out
+}
+
 // Handler returns the installed handler for a use case, if any.
 func (o *Orchestrator) Handler(id domainmodel.UseCaseID) (usecase.Handler, bool) {
 	h, ok := o.handlers[id]
@@ -128,11 +161,14 @@ func (o *Orchestrator) Subscribe() (<-chan RunEvent, func()) {
 	o.next++
 	ch := make(chan RunEvent, 256)
 	o.subs[id] = ch
+	var once sync.Once
 	return ch, func() {
-		o.mu.Lock()
-		defer o.mu.Unlock()
-		delete(o.subs, id)
-		close(ch)
+		once.Do(func() {
+			o.mu.Lock()
+			defer o.mu.Unlock()
+			delete(o.subs, id)
+			close(ch)
+		})
 	}
 }
 
@@ -262,7 +298,7 @@ func (o *Orchestrator) runUseCase(ctx context.Context, run *TestRun, d DeviceUnd
 
 		o.publish(RunEvent{RunID: run.ID, SKI: d.SKI, UseCase: handler.ID(), Status: StatusRunning, StepName: step.Name})
 
-		result := o.runStep(d.Entity, handler, nominalMaxW, step, run.Tolerance)
+		result := o.runStep(ctx, d.Entity, handler, nominalMaxW, step, run.Tolerance)
 
 		run.mu.Lock()
 		res.Steps = append(res.Steps, result)
@@ -291,7 +327,7 @@ func (o *Orchestrator) runUseCase(ctx context.Context, run *TestRun, d DeviceUnd
 	return overall
 }
 
-func (o *Orchestrator) runStep(entity spineapi.EntityRemoteInterface, handler usecase.Handler, nominalMaxW float64, step usecase.ScenarioStep, tol usecase.Tolerance) usecase.StepResult {
+func (o *Orchestrator) runStep(ctx context.Context, entity spineapi.EntityRemoteInterface, handler usecase.Handler, nominalMaxW float64, step usecase.ScenarioStep, tol usecase.Tolerance) usecase.StepResult {
 	setpointW := nominalMaxW * step.PercentOfNominal / 100
 
 	result := usecase.StepResult{
@@ -333,6 +369,10 @@ func (o *Orchestrator) runStep(entity spineapi.EntityRemoteInterface, handler us
 		result.Pass = false
 		result.FailReason = fmt.Sprintf("keine Quittierung innerhalb von %s", tol.AckTimeout)
 		return result
+	case <-ctx.Done():
+		result.Pass = false
+		result.FailReason = "Testlauf abgebrochen"
+		return result
 	}
 
 	// Poll the device's read-back limit until it matches the setpoint
@@ -340,6 +380,14 @@ func (o *Orchestrator) runStep(entity spineapi.EntityRemoteInterface, handler us
 	deadline := time.Now().Add(tol.ActualTimeout)
 	allowed := tol.AllowedDeviation(setpointW)
 	for {
+		select {
+		case <-ctx.Done():
+			result.Pass = false
+			result.FailReason = "Testlauf abgebrochen"
+			return result
+		default:
+		}
+
 		valueW, isActive, err := handler.CurrentLimitW(entity)
 		if err == nil && isActive {
 			result.ActualKnown = true
@@ -363,6 +411,12 @@ func (o *Orchestrator) runStep(entity spineapi.EntityRemoteInterface, handler us
 			}
 			return result
 		}
-		time.Sleep(2 * time.Second)
+		select {
+		case <-time.After(2 * time.Second):
+		case <-ctx.Done():
+			result.Pass = false
+			result.FailReason = "Testlauf abgebrochen"
+			return result
+		}
 	}
 }

@@ -56,9 +56,9 @@ type Device struct {
 	State     ConnectionState
 	LastError string
 
-	FirstSeen  time.Time
-	LastSeen   time.Time
-	PairedAt   *time.Time
+	FirstSeen   time.Time
+	LastSeen    time.Time
+	PairedAt    *time.Time
 	KnownDevice bool // true if this SKI was loaded from the local device store (skip trust confirmation)
 }
 

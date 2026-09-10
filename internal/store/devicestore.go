@@ -20,14 +20,14 @@ import (
 // at least once. It intentionally does not store any certificate/key
 // material - that stays inside ship-go's own TLS trust handling.
 type KnownDevice struct {
-	SKI      string          `json:"ski"`
-	ShipID   string          `json:"shipId"`
-	Brand    string          `json:"brand"`
-	Model    string          `json:"model"`
-	Name     string          `json:"name"`
-	Role     model.DeviceRole `json:"role"`
-	FirstPaired time.Time    `json:"firstPaired"`
-	LastSeen time.Time       `json:"lastSeen"`
+	SKI         string           `json:"ski"`
+	ShipID      string           `json:"shipId"`
+	Brand       string           `json:"brand"`
+	Model       string           `json:"model"`
+	Name        string           `json:"name"`
+	Role        model.DeviceRole `json:"role"`
+	FirstPaired time.Time        `json:"firstPaired"`
+	LastSeen    time.Time        `json:"lastSeen"`
 }
 
 // DeviceStore is a thread-safe, file-backed registry of known devices.

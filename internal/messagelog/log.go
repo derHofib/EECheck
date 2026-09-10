@@ -69,9 +69,9 @@ func (l *Log) HandleEvent(payload spineapi.EventPayload) {
 	entry := Entry{
 		Timestamp: time.Now(),
 		SKI:       payload.Ski,
-		EventType: string(payload.EventType),
+		EventType: eventTypeLabel(payload.EventType),
 	}
-	entry.ChangeType = string(payload.ChangeType)
+	entry.ChangeType = changeTypeLabel(payload.ChangeType)
 	entry.Function = string(payload.Function)
 	if payload.CmdClassifier != nil {
 		entry.CmdClassifier = string(*payload.CmdClassifier)
@@ -134,19 +134,40 @@ func (l *Log) Subscribe() (<-chan Entry, func()) {
 	l.nextSub++
 	ch := make(chan Entry, 256)
 	l.subs[id] = ch
+	var once sync.Once
 	return ch, func() {
-		l.mu.Lock()
-		defer l.mu.Unlock()
-		delete(l.subs, id)
-		close(ch)
+		once.Do(func() {
+			l.mu.Lock()
+			defer l.mu.Unlock()
+			delete(l.subs, id)
+			close(ch)
+		})
 	}
 }
 
 // WriteNDJSON writes the complete recorded log to w, one JSON object per
 // line, for manual export independent of a live SetFile sink.
 func (l *Log) WriteNDJSON(w io.Writer) error {
+	return writeEntriesNDJSON(w, l.Entries())
+}
+
+// WriteNDJSONBetween writes only the entries recorded within [start, end],
+// for exporting the Rohlog of a single test run out of a log that may span
+// multiple runs in one session.
+func (l *Log) WriteNDJSONBetween(w io.Writer, start, end time.Time) error {
+	all := l.Entries()
+	filtered := make([]Entry, 0, len(all))
+	for _, e := range all {
+		if !e.Timestamp.Before(start) && !e.Timestamp.After(end) {
+			filtered = append(filtered, e)
+		}
+	}
+	return writeEntriesNDJSON(w, filtered)
+}
+
+func writeEntriesNDJSON(w io.Writer, entries []Entry) error {
 	bw := bufio.NewWriter(w)
-	for _, e := range l.Entries() {
+	for _, e := range entries {
 		raw, err := json.Marshal(e)
 		if err != nil {
 			return err
@@ -159,4 +180,37 @@ func (l *Log) WriteNDJSON(w io.Writer) error {
 		}
 	}
 	return bw.Flush()
+}
+
+// EventType and ElementChangeType are plain numeric enums in spine-go (no
+// String() method), so we map them to readable labels ourselves for the
+// decoded live log / NDJSON export.
+func eventTypeLabel(t spineapi.EventType) string {
+	switch t {
+	case spineapi.EventTypeDeviceChange:
+		return "DeviceChange"
+	case spineapi.EventTypeEntityChange:
+		return "EntityChange"
+	case spineapi.EventTypeSubscriptionChange:
+		return "SubscriptionChange"
+	case spineapi.EventTypeBindingChange:
+		return "BindingChange"
+	case spineapi.EventTypeDataChange:
+		return "DataChange"
+	default:
+		return fmt.Sprintf("EventType(%d)", t)
+	}
+}
+
+func changeTypeLabel(t spineapi.ElementChangeType) string {
+	switch t {
+	case spineapi.ElementChangeAdd:
+		return "Add"
+	case spineapi.ElementChangeUpdate:
+		return "Update"
+	case spineapi.ElementChangeRemove:
+		return "Remove"
+	default:
+		return fmt.Sprintf("ElementChangeType(%d)", t)
+	}
 }
