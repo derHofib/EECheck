@@ -33,17 +33,24 @@ cmd/testspeicher         Simulierter Batteriespeicher (Controllable System, LPC+
 
 Benötigt Go 1.24+. Fyne nutzt CGO/OpenGL; auf Linux werden zum Bauen
 X11/OpenGL-Entwicklungspakete benötigt (z. B. `libgl1-mesa-dev xorg-dev
-pkg-config` auf Debian/Ubuntu). Für native macOS-(arm64)- und
-Windows-(x64)-Builds ohne WebView-Abhängigkeit wird
-[`fyne-cross`](https://github.com/fyne-io/fyne-cross) empfohlen:
+pkg-config` auf Debian/Ubuntu).
+
+### macOS-App zum Doppelklicken (kein Terminal mehr nötig)
+
+Auf einem Mac direkt eine echte `EECheck.app` bauen:
 
 ```
-go install fyne.io/fyne/v2/cmd/fyne-cross@latest
-fyne-cross darwin -arch=arm64 -app-id de.eecheck.steuerboxsimulator ./cmd/eecheck
-fyne-cross windows -arch=amd64 -app-id de.eecheck.steuerboxsimulator ./cmd/eecheck
+xcode-select --install   # falls noch nicht installiert
+./scripts/build-macos-app.sh
 ```
 
-Lokal (Linux, zur Entwicklung):
+Das Skript installiert bei Bedarf das `fyne`-Packaging-Tool und erzeugt
+`EECheck.app` im Projektverzeichnis. Danach per Doppelklick starten oder
+in den Programme-Ordner ziehen — kein `go run` mehr nötig. (Für
+Windows analog mit `fyne package -os windows`, siehe
+[Fyne-Dokumentation](https://docs.fyne.io/started/packaging).)
+
+### Lokal bauen/entwickeln (Linux, oder ohne Doppelklick-App)
 
 ```
 go build ./...
